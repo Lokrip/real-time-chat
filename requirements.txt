@@ -10,3 +10,4 @@ channels
 whitenoise
 django-cloudinary-storage
 dj_database_url
+gunicorn
