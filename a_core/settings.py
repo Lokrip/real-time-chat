@@ -12,12 +12,9 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 from urllib.parse import urlparse
+import os
 
-from environ import Env
-env = Env()
-env.read_env()
-
-ENVIRONMENT = env("ENVIRONMENT", default="production")
+ENVIRONMENT = os.environ.get("ENVIRONMENT", default="production")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -115,7 +112,7 @@ else:
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [(env("REDIS_URL"))],
+                "hosts": [(os.environ.get("REDIS_URL"))],
             },
         },
     }
@@ -134,7 +131,7 @@ if ENVIRONMENT == "development":
 else:
     import dj_database_url
     DATABASES = {
-        'default': dj_database_url.parse(env("DATABASE_URL"))
+        'default': dj_database_url.parse(os.environ.get("DATABASE_URL"))
     }
 
 
@@ -184,7 +181,7 @@ else:
     #django_cloudinary_storage
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
     CLOUDINARY_STORAGE = {
-        'CLOUDINARY_URL': env("CLOUDINARY_URL"),
+        'CLOUDINARY_URL': os.environ.get("CLOUDINARY_URL"),
     }
 
 # Default primary key field type
@@ -201,10 +198,10 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
-EMAIL_HOST_USER = env("EMAIL_ADDRESS")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+EMAIL_HOST_USER = os.environ.get("EMAIL_ADDRESS")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 
-DEFAULT_FROM_EMAIL = f"Real-Time Chat {env("EMAIL_ADDRESS")}"
+DEFAULT_FROM_EMAIL = f"Real-Time Chat {os.environ.get("EMAIL_ADDRESS")}"
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
 
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
