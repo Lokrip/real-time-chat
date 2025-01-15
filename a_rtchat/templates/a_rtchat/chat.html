@@ -1,0 +1,198 @@
+{% extends 'layouts/blank.html' %}
+
+{% block content %}
+<wrapper class="block max-w-2xl mx-auto my-10 px-6">
+    {% if chat_group.groupchat_name %}
+    <div class="flex justify-between">
+        <h2>{{chat_group.groupchat_name}}</h2>
+        {% if request.user == chat_group.admin %}
+        <a href="{% url 'home-chat:edit-chatroom' chat_group.group_name %}">
+            <div class="p-2 bg-gray-200 hover:bg-blue-600 rounded-lg group">
+                <svg class="fill-gray-500 group-hover:fill-white" width="16" height="16">
+                    <path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Zm.176 4.823L9.75 4.81l-6.286 6.287a.253.253 0 0 0-.064.108l-.558 1.953 1.953-.558a.253.253 0 0 0 .108-.064Zm1.238-3.763a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354Z"></path>
+                </svg>
+            </div>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+    <div id="chat_window" class="h-[45rem] flex flex-col bg-gray-800 rounded-2xl shadow-2xl relative p-1">
+        <div class="flex justify-center text-emerald-400 bg-gray-800 p-2 sticky top-0 z-10">
+            {% if other_user %}
+            <a href="{% url 'profile' other_user.username %}">
+                <div class="flex items-center gap-2 p-4 sticky top-0 z-10">
+                    <img class="w-10 h-10 rounded-full object-cover" src="{{other_user.profile.avatar}}" alt="">
+                    <div>
+                        <span class="font-bold text-white">{{other_user.profile.name}}</span>
+                        <span class="text-sm font-light text-gray-400">@{{other_user.username}}</span>
+                    </div>
+                </div>
+            </a>
+            {% elif chat_group.groupchat_name %}
+            <ul id="groupchat-members" class="flex gap-4">
+                {% for member in chat_group.members.all %}
+                <li>
+                    <a href="{% url 'profile' member.username %}"
+                        class="flex flex-col text-gray-400 items-center justify-center w-20 gap-2"
+                    >
+                        <div class="relative">
+                            {% if member in chat_group.users_online.all %}
+                            <div class="green-dot border-2 border-gray-800 absolute bottom-0 right-0"></div>
+                            {% else %}
+                            <div class="gray-dot border-2 border-gray-800 absolute bottom-0 right-0"></div>
+                            {% endif %}
+                            <img src="{{member.profile.avatar}}" alt="" class="w-14 h-14 rounded-full object-cover">
+                        </div>
+                        {{member.profile.name|slice:":10"}}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            {% include 'a_rtchat/partials/online_count.html' %}
+            {% endif %}
+        </div>
+        <div id='chat_container' class="overflow-y-auto grow">
+            <ul id='chat_messages' class="flex flex-col justify-end gap-2 p-4">
+                {% for message in chat_messages reversed %}
+                {% include 'a_rtchat/chat_message.html' %}
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="sticky bottom-0 z-10 p-2 bg-gray-800">
+            <div class="flex flex-col gap-4 items-center rounded-xl px-2 py-2">
+                <!--hx-target="#chat_message" это то место куда мы хотим поместить новые сообщение-->
+                <!--hx-swap="beforeend" добовляет новое сообщение в конец списка-->
+                <form id="chat_message_form" method="post">
+                    {% csrf_token %}
+                    {{ form }}
+                </form>
+            </div>
+        </div>
+    </div>
+    {% if chat_group.members.exists %}
+    <a href="{% url 'home-chat:chatroom-leave' chat_group.group_name %}">
+        Leave Chat
+    </a>
+    {% endif %}
+</wrapper>
+{% endblock content %}
+
+
+{% block javascript %}
+<script>
+    const usernameR = "{{request.user.username}}"
+    class WebSocketChat {
+        constructor(chatGroupName) {
+            this.chatSocket = new WebSocket(
+                `ws://${window.location.host}/ws/chatroom/${chatGroupName}`
+            )
+
+            this.chatSocket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                this.setOnlineCount(data.online_count)
+                this.appendMessage(data);
+                scrollToBottom();
+            }
+
+            this.chatSocket.onclose = () => {
+                console.error('WebSocket закрыт неожиданно.');
+            };
+        }
+
+        send_message(data) {
+            if (data.body.trim()) {
+                this.chatSocket.send(JSON.stringify({ body: data.body }));
+            }
+        }
+
+        setOnlineCount(count) {
+            const onlineCount = document.querySelector('#online-count')
+            const onlineIcon = document.querySelector('#online-icon');
+
+            if (!onlineCount || !onlineIcon) {
+                console.warn('Элементы #online-count или #online-icon не найдены.');
+                return;
+            }
+
+            if(parseInt(count) > 0) {
+                onlineCount.innerHTML = `${count ? count : ""} online`
+                console.log(onlineIcon)
+                onlineIcon.className = `absolute top-2 left-2 rounded-full bg-green-500 p-1.5`
+            } else {
+                onlineCount.innerHTML = `${count ? count : ""} online`
+                onlineIcon.className = `absolute top-2 left-2 rounded-full bg-gray-500 p-1.5`
+            }
+        }
+
+        appendMessage(message) {
+            const chatMessages = document.getElementById('chat_messages')
+            let html;
+
+            if(!message || !message.author) {
+                return
+            }
+            
+            if (message.author === usernameR) {
+                html = `<li class="flex justify-end mb-4">
+                            <div class="bg-green-200 rounded-l-lg rounded-tr-lg p-4 max-w-[75%]">
+                                <span>${message.body}</span>
+                            </div>
+                            <div class="flex items-end">
+                                <svg height="13" width="8" >
+                                    <path fill="#bbf7d0" d="M6.3,10.4C1.5,8.7,0.9,5.5,0,0.2L0,13l5.2,0C7,13,9.6,11.5,6.3,10.4z"/>
+                                </svg>
+                            </div>
+                        </li>`
+                }
+            else {
+                html = `<li>
+                    <div class="flex justify-start">
+                        <div class="flex items-end mr-2" >
+                            <a href="/profile/${message.author}">
+                                <div class="relative">
+                                    <div id="user"></div>
+                                    <img class="w-8 h-8 rounded-full object-cover" src="{{message.author.profile.avatar}}">
+                                </div>
+                            </a>
+                        </div>
+                        <div class="flex items-end" >
+                            <svg height="13" width="8" >
+                                <path fill="white" d="M2.8,13L8,13L8,0.2C7.1,5.5,6.5,8.7,1.7,10.4C-1.6,11.5,1,13,2.8,13z"></path>
+                            </svg>
+                        </div>
+                        <div class="bg-white p-4 max-w-[75%] rounded-r-lg rounded-tl-lg">
+                            <span>${message.body}</span>
+                        </div>  
+                    </div>
+                </li>`
+            }
+
+            chatMessages.insertAdjacentHTML("beforeend", html)
+        }
+    }
+
+    const scrollToBottom = (time=0) => {
+        setTimeout(function() {
+            const container = document.getElementById('chat_container');
+            container.scrollTop = container.scrollHeight;
+        }, time);
+    }
+
+    const chatGroupName = "{{ chatroom_name }}";
+    const chatApp = new WebSocketChat(chatGroupName);
+
+    const form = document.getElementById('chat_message_form')
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault()
+        const input = form.querySelector('#id_body')
+
+        chatApp.send_message({
+            'body': input.value
+        })
+    })
+    
+    scrollToBottom()
+</script>
+{% endblock %}

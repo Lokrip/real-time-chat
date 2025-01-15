@@ -1,0 +1,12 @@
+Django
+pillow
+django-cleanup
+django-allauth
+django-environ
+django-htmx
+daphne
+shortuuid
+channels
+whitenoise
+django-cloudinary-storage
+dj_database_url
