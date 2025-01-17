@@ -32,7 +32,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'https://real-time-chat-rea5.onrender.com']
 
-CSRF_TRUSTED_ORIGINS = [ 'https://*' ]
+CSRF_TRUSTED_ORIGINS = [ 'https://real-time-chat-rea5.onrender.com' ]
 
 
 # Application definition

@@ -1,0 +1,46 @@
+# Автоматическое определение текста и установка окончания строки для Windows
+* text=auto
+
+# Обработка различных текстовых файлов
+*.c text
+*.cpp text
+*.h text
+*.py text
+*.java text
+*.js text
+*.html text
+*.css text
+*.md text
+*.yml text
+*.xml text
+
+# Обработка изображений как бинарных файлов
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.ico binary
+*.svg binary
+
+# Исключение из слияний для бинарных файлов
+*.dll -merge
+*.exe -merge
+*.so -merge
+*.a -merge
+*.lib -merge
+*.dat -merge
+
+# Настройка фильтров для файлов
+*.crlf text eol=crlf
+*.lf text eol=lf
+
+# Установка для больших файлов
+*.zip binary
+*.tar binary
+*.gz binary
+*.bz2 binary
+
+# Настройки для работы с текстовыми файлами с использованием UTF-8
+*.txt text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
